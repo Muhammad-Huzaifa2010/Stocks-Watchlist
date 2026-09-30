@@ -1,0 +1,70 @@
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: stocks-watchlist-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-stocks_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-stocks_password}
+      POSTGRES_DB: ${POSTGRES_DB:-stocks_watchlist}
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U ${POSTGRES_USER:-stocks_user} -d ${POSTGRES_DB:-stocks_watchlist}
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: stocks-watchlist-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - ./backend/.env
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-stocks_user}:${POSTGRES_PASSWORD:-stocks_password}@db:5432/${POSTGRES_DB:-stocks_watchlist}
+    command:
+      - uvicorn
+      - app.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --proxy-headers
+      - --forwarded-allow-ips
+      - 172.19.0.4
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: stocks-watchlist-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    networks:
+      default:
+        ipv4_address: 172.19.0.4
+
+volumes:
+  postgres_data:
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.19.0.0/16
