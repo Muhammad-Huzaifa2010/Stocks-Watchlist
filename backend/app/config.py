@@ -12,9 +12,14 @@ class Settings(BaseSettings):
     secret_key: str = Field(min_length=32)
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
+    
     cors_origins: str = (
-        "http://localhost:5173,http://127.0.0.1:5173,"
-        "http://localhost:5174,http://127.0.0.1:5174"
+        "http://localhost:5173,"
+        "http://127.0.0.1:5173,"
+        "http://localhost:5174,"
+        "http://127.0.0.1:5174,"
+        "https://stocks-watchlist-wx4f.vercel.app,"
+        "https://stocks-watchlist-online.vercel.app"
     )
     login_rate_limit: int = 5
     signup_rate_limit: int = 3
